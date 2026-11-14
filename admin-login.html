@@ -1,0 +1,134 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Admin Login | Tibyan Wattahfizul Qur'an</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .admin-auth {
+      min-height: 85vh;
+      display: grid;
+      place-items: center;
+      padding: 35px 18px;
+      background: #f5f7f5;
+    }
+    .admin-box {
+      width: 100%;
+      max-width: 440px;
+      background: white;
+      padding: 35px;
+      border-radius: 15px;
+      box-shadow: 0 8px 30px rgba(0,0,0,.08);
+    }
+    .admin-box h1 { margin-bottom: 10px; }
+    .admin-box p { margin-bottom: 22px; }
+    .admin-box label {
+      display: block;
+      margin: 15px 0 7px;
+      font-weight: 600;
+    }
+    .admin-box input {
+      width: 100%;
+      padding: 13px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      font: inherit;
+    }
+    .admin-box button {
+      width: 100%;
+      margin-top: 22px;
+      border: 0;
+      cursor: pointer;
+    }
+    #message { margin-top: 15px; }
+    .back-link { display: inline-block; margin-top: 20px; }
+  </style>
+</head>
+<body>
+
+<header class="site-header">
+  <a class="brand" href="index.html">
+    <span class="brand-mark">ت</span>
+    <span>
+      <strong>TIBYAN WATTAHFIZUL QUR'AN</strong>
+      <small>Unguwar Alhaji · Hadejia, Jigawa</small>
+    </span>
+  </a>
+</header>
+
+<main class="admin-auth">
+  <section class="admin-box">
+    <span class="kicker">SCHOOL MANAGEMENT</span>
+    <h1>Administrator Login</h1>
+    <p>Sign in to manage school activities and records.</p>
+
+    <form id="adminLoginForm">
+      <label for="email">Email Address</label>
+      <input type="email" id="email" required autocomplete="username">
+
+      <label for="password">Password</label>
+      <input type="password" id="password" required autocomplete="current-password">
+
+      <button class="button button-dark" type="submit">
+        Sign In
+      </button>
+    </form>
+
+    <p id="message" role="status"></p>
+    <a class="back-link" href="index.html">← Back to Homepage</a>
+  </section>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase-config.js"></script>
+
+<script>
+const form = document.getElementById('adminLoginForm');
+const message = document.getElementById('message');
+
+form.addEventListener('submit', async (event) => {
+  event.preventDefault();
+
+  const email = document.getElementById('email').value.trim();
+  const password = document.getElementById('password').value;
+
+  message.textContent = 'Checking your account...';
+
+  try {
+    const { data, error } =
+      await window.supabaseClient.auth.signInWithPassword({
+        email,
+        password
+      });
+
+    if (error) throw error;
+
+    const { data: profile, error: profileError } =
+      await window.supabaseClient
+        .from('profiles')
+        .select('role, approval_status')
+        .eq('id', data.user.id)
+        .single();
+
+    if (profileError || !profile ||
+        profile.role !== 'admin' ||
+        profile.approval_status !== 'approved') {
+
+      await window.supabaseClient.auth.signOut();
+      throw new Error('This account is not authorised as an administrator.');
+    }
+
+    message.textContent = 'Login successful!';
+
+    window.location.href = 'admin-dashboard.html';
+
+  } catch (error) {
+    message.textContent = error.message;
+  }
+});
+</script>
+
+</body>
+</html>
