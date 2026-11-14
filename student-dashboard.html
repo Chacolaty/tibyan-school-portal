@@ -1,0 +1,220 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Student Dashboard | Tibyan School</title>
+
+  <style>
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f1f5f9;
+      color: #243247;
+    }
+
+    header {
+      background: #092b55;
+      color: white;
+      padding: 22px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 15px;
+    }
+
+    header h2 { margin: 0; }
+
+    button {
+      background: #e5ad20;
+      color: #102b4c;
+      border: none;
+      border-radius: 7px;
+      padding: 11px 18px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    main {
+      max-width: 1050px;
+      margin: 35px auto;
+      padding: 0 18px;
+    }
+
+    .welcome {
+      background: linear-gradient(120deg, #092b55, #126b78);
+      color: white;
+      padding: 30px;
+      border-radius: 15px;
+      margin-bottom: 25px;
+    }
+
+    .welcome h1 { margin-top: 0; }
+
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 20px;
+    }
+
+    .card {
+      background: white;
+      padding: 25px;
+      border-radius: 12px;
+      box-shadow: 0 4px 15px rgba(0,0,0,.06);
+    }
+
+    .card h3 { color: #126b78; }
+
+    .value {
+      font-size: 18px;
+      font-weight: bold;
+      overflow-wrap: anywhere;
+    }
+
+    #status {
+      text-align: center;
+      padding: 30px;
+    }
+
+    footer {
+      text-align: center;
+      padding: 25px;
+      color: #718096;
+    }
+  </style>
+</head>
+
+<body>
+
+  <header>
+    <h2>Tibyan Student Portal</h2>
+    <button id="logoutButton">Logout</button>
+  </header>
+
+  <main>
+    <section class="welcome">
+      <h1 id="welcomeName">Welcome, Student</h1>
+      <p>Welcome to your personal school dashboard.</p>
+    </section>
+
+    <div class="cards">
+      <section class="card">
+        <h3>Full Name</h3>
+        <p class="value" id="fullName">Loading...</p>
+      </section>
+
+      <section class="card">
+        <h3>Email Address</h3>
+        <p class="value" id="email">Loading...</p>
+      </section>
+
+      <section class="card">
+        <h3>Class</h3>
+        <p class="value" id="className">Loading...</p>
+      </section>
+
+      <section class="card">
+        <h3>Account Status</h3>
+        <p class="value" id="accountStatus">Loading...</p>
+      </section>
+    </div>
+
+    <p id="status" role="status"></p>
+  </main>
+
+  <footer>
+    Tibyan Wattahfizul Qur'an, Unguwar Alhaji, Hadejia, Jigawa State.
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase-config.js"></script>
+
+  <script>
+    async function loadDashboard() {
+      const supabase = window.supabaseClient;
+      const status = document.getElementById("status");
+
+      try {
+        const { data: sessionData, error: sessionError } =
+          await supabase.auth.getSession();
+
+        if (sessionError) throw sessionError;
+
+        const user = sessionData.session?.user;
+
+        if (!user) {
+          window.location.href = "student-login.html";
+          return;
+        }
+
+        const { data: profile, error } = await supabase
+          .from("profiles")
+          .select("full_name, role, approval_status, class_id")
+          .eq("id", user.id)
+          .single();
+
+        if (error) throw error;
+
+        if (
+          profile.role !== "student" ||
+          profile.approval_status !== "approved"
+        ) {
+          await supabase.auth.signOut();
+          window.location.href = "student-login.html";
+          return;
+        }
+
+        document.getElementById("welcomeName").textContent =
+          "Welcome, " + (profile.full_name || "Student");
+
+        document.getElementById("fullName").textContent =
+          profile.full_name || "Not available";
+
+        document.getElementById("email").textContent =
+          user.email || "Not available";
+
+        document.getElementById("accountStatus").textContent =
+          "Approved";
+
+        let className = "Not assigned";
+
+        if (profile.class_id) {
+          const { data: classData, error: classError } = await supabase
+            .from("classes")
+            .select("name")
+            .eq("id", profile.class_id)
+            .maybeSingle();
+
+          if (classError) throw classError;
+          if (classData) className = classData.name;
+        }
+
+        document.getElementById("className").textContent = className;
+
+      } catch (error) {
+        status.style.color = "red";
+        status.textContent = "Unable to load dashboard: " + error.message;
+      }
+    }
+
+    document.getElementById("logoutButton").addEventListener("click", async () => {
+      const { error } = await window.supabaseClient.auth.signOut();
+
+      if (error) {
+        alert("Logout failed: " + error.message);
+        return;
+      }
+
+      window.location.href = "student-login.html";
+    });
+
+    loadDashboard();
+  </script>
+
+</body>
+</html>
