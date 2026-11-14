@@ -1,0 +1,205 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Student Login | Tibyan School</title>
+
+  <style>
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      font-family: Arial, sans-serif;
+      background: linear-gradient(135deg, #092b55, #126b78);
+    }
+
+    .login-card {
+      background: white;
+      width: 100%;
+      max-width: 420px;
+      padding: 35px;
+      border-radius: 16px;
+      box-shadow: 0 12px 35px rgba(0,0,0,.2);
+    }
+
+    h1 {
+      text-align: center;
+      color: #092b55;
+      margin-bottom: 8px;
+    }
+
+    .subtitle {
+      text-align: center;
+      color: #687386;
+      margin-bottom: 28px;
+    }
+
+    label {
+      display: block;
+      margin: 16px 0 7px;
+      font-weight: bold;
+      color: #26364a;
+    }
+
+    input {
+      width: 100%;
+      padding: 13px;
+      border: 1px solid #ccd4df;
+      border-radius: 8px;
+      font-size: 15px;
+    }
+
+    input:focus {
+      outline: 2px solid #126b78;
+      border-color: transparent;
+    }
+
+    button {
+      width: 100%;
+      padding: 14px;
+      margin-top: 24px;
+      border: none;
+      border-radius: 8px;
+      background: #092b55;
+      color: white;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    button:disabled {
+      opacity: .6;
+      cursor: not-allowed;
+    }
+
+    #message {
+      margin-top: 16px;
+      text-align: center;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    .links {
+      text-align: center;
+      margin-top: 22px;
+      line-height: 2;
+    }
+
+    a { color: #087b75; text-decoration: none; }
+  </style>
+</head>
+
+<body>
+
+  <main class="login-card">
+    <h1>Student Login</h1>
+    <p class="subtitle">Tibyan Wattahfizul Qur'an School Portal</p>
+
+    <form id="loginForm">
+      <label for="email">Email Address</label>
+      <input
+        type="email"
+        id="email"
+        placeholder="Enter your registered email"
+        required
+      >
+
+      <label for="password">Password</label>
+      <input
+        type="password"
+        id="password"
+        placeholder="Enter your password"
+        required
+      >
+
+      <button type="submit" id="loginButton">
+        Login to Student Portal
+      </button>
+    </form>
+
+    <p id="message" role="status"></p>
+
+    <div class="links">
+      <a href="student-register.html">Create Student Account</a>
+      <br>
+      <a href="index.html">Back to Homepage</a>
+    </div>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase-config.js"></script>
+
+  <script>
+    const form = document.getElementById("loginForm");
+    const message = document.getElementById("message");
+    const button = document.getElementById("loginButton");
+
+    form.addEventListener("submit", async function(event) {
+      event.preventDefault();
+
+      message.textContent = "";
+      button.disabled = true;
+      button.textContent = "Please wait...";
+
+      try {
+        const email = document.getElementById("email").value.trim();
+        const password = document.getElementById("password").value;
+
+        const { data, error } =
+          await window.supabaseClient.auth.signInWithPassword({
+            email,
+            password
+          });
+
+        if (error) throw error;
+
+        const { data: profile, error: profileError } =
+          await window.supabaseClient
+            .from("profiles")
+            .select("full_name, role, approval_status")
+            .eq("id", data.user.id)
+            .single();
+
+        if (profileError || !profile) {
+          await window.supabaseClient.auth.signOut();
+          throw new Error("Your student profile could not be found. Please contact the school administrator.");
+        }
+
+        if (
+          profile.role !== "student" ||
+          profile.approval_status !== "approved"
+        ) {
+          await window.supabaseClient.auth.signOut();
+          throw new Error("This account does not have approved student access.");
+        }
+
+        message.style.color = "green";
+        message.textContent = "Login successful. Opening your dashboard...";
+
+        window.location.href = "student-dashboard.html";
+
+      } catch (error) {
+        message.style.color = "red";
+
+        if (error.message.toLowerCase().includes("email not confirmed")) {
+          message.textContent = "Please verify your email before logging in.";
+        } else {
+          message.textContent = error.message;
+        }
+
+      } finally {
+        button.disabled = false;
+        button.textContent = "Login to Student Portal";
+      }
+    });
+  </script>
+
+</body>
+</html>
