@@ -50,6 +50,11 @@
       cursor: pointer;
     }
 
+    .register-card button:disabled {
+      opacity: .6;
+      cursor: not-allowed;
+    }
+
     #message {
       margin-top: 15px;
       line-height: 1.6;
@@ -130,16 +135,26 @@
 <script src="supabase-config.js"></script>
 
 <script>
-const supabase = window.supabaseClient;
+const db = window.supabaseClient;
+
 const form = document.getElementById("registerForm");
 const message = document.getElementById("message");
 const classSelect = document.getElementById("studentClass");
 const registerButton = document.getElementById("registerButton");
 
+// Check Supabase connection
+if (!db) {
+  message.style.color = "red";
+  message.textContent =
+    "Supabase connection failed. Please contact the administrator.";
+  classSelect.innerHTML =
+    '<option value="">Connection unavailable</option>';
+}
+
 // Load actual class IDs from Supabase
 async function loadClasses() {
   try {
-    const { data, error } = await supabase
+    const { data, error } = await db
       .from("classes")
       .select("id, name")
       .order("name");
@@ -166,11 +181,14 @@ async function loadClasses() {
       '<option value="">Unable to load classes</option>';
 
     message.style.color = "red";
-    message.textContent = "Could not load classes: " + error.message;
+    message.textContent =
+      "Could not load classes: " + error.message;
   }
 }
 
-loadClasses();
+if (db) {
+  loadClasses();
+}
 
 // Register student
 form.addEventListener("submit", async event => {
@@ -210,11 +228,13 @@ form.addEventListener("submit", async event => {
 
   registerButton.disabled = true;
   registerButton.textContent = "Creating account...";
+
   message.style.color = "#333";
-  message.textContent = "Please wait while your account is created...";
+  message.textContent =
+    "Please wait while your account is created...";
 
   try {
-    const { data, error } = await supabase.auth.signUp({
+    const { data, error } = await db.auth.signUp({
       email,
       password,
       options: {
@@ -232,15 +252,16 @@ form.addEventListener("submit", async event => {
     if (error) throw error;
 
     if (!data.user) {
-      throw new Error("Account creation could not be confirmed.");
+      throw new Error(
+        "Account creation could not be confirmed."
+      );
     }
 
     message.style.color = "green";
     message.textContent =
       "Registration submitted successfully! " +
       "Please check your email and confirm your email address. " +
-      "Your account is now awaiting administrator approval. " +
-      "You can log in after email verification and admin approval.";
+      "Your account is awaiting administrator approval.";
 
     form.reset();
 
