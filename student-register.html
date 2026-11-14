@@ -1,0 +1,183 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Student Registration | Tibyan Wattahfizul Qur'an</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .register-section {
+      min-height: 90vh;
+      background: #f5f7f5;
+      padding: 45px 18px;
+      display: grid;
+      place-items: center;
+    }
+    .register-card {
+      width: 100%;
+      max-width: 600px;
+      background: white;
+      padding: 35px;
+      border-radius: 15px;
+      box-shadow: 0 8px 30px rgba(0,0,0,.08);
+    }
+    .register-card h1 { margin-bottom: 10px; }
+    .register-card label {
+      display: block;
+      margin: 15px 0 7px;
+      font-weight: 600;
+    }
+    .register-card input,
+    .register-card select,
+    .register-card textarea {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      font: inherit;
+    }
+    .register-card button {
+      width: 100%;
+      border: 0;
+      margin-top: 24px;
+      cursor: pointer;
+    }
+    #message { margin-top: 15px; }
+  </style>
+</head>
+<body>
+
+<header class="site-header">
+  <a class="brand" href="index.html">
+    <span class="brand-mark">ت</span>
+    <span>
+      <strong>TIBYAN WATTAHFIZUL QUR'AN</strong>
+      <small>Student Registration</small>
+    </span>
+  </a>
+</header>
+
+<main class="register-section">
+  <section class="register-card">
+    <span class="kicker">JOIN OUR SCHOOL</span>
+    <h1>Student Registration</h1>
+    <p>Create your student portal account.</p>
+
+    <form id="registerForm">
+      <label for="fullName">Full Name</label>
+      <input id="fullName" type="text" required>
+
+      <label for="email">Email Address</label>
+      <input id="email" type="email" required>
+
+      <label for="phone">Phone Number</label>
+      <input id="phone" type="tel" required>
+
+      <label for="address">Home Address</label>
+      <textarea id="address" rows="3" required></textarea>
+
+      <label for="studentClass">Select Class</label>
+      <select id="studentClass" required>
+        <option value="">Choose your class</option>
+        <option value="Tahfiz">Tahfiz</option>
+        <option value="Islamiyyah">Islamiyyah</option>
+        <option value="Arabic">Arabic</option>
+      </select>
+
+      <label for="password">Create Password</label>
+      <input id="password" type="password" minlength="8"
+        autocomplete="new-password" required>
+
+      <label for="confirmPassword">Confirm Password</label>
+      <input id="confirmPassword" type="password"
+        autocomplete="new-password" required>
+
+      <button class="button button-dark" type="submit">
+        Create Student Account
+      </button>
+    </form>
+
+    <p id="message" role="status"></p>
+    <p>Already registered? <a href="student-login.html">Student Login</a></p>
+    <a href="index.html">← Back to Homepage</a>
+  </section>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase-config.js"></script>
+
+<script>
+const form = document.getElementById('registerForm');
+const message = document.getElementById('message');
+
+form.addEventListener('submit', async (event) => {
+  event.preventDefault();
+
+  const fullName = document.getElementById('fullName').value.trim();
+  const email = document.getElementById('email').value.trim();
+  const phone = document.getElementById('phone').value.trim();
+  const address = document.getElementById('address').value.trim();
+  const studentClass = document.getElementById('studentClass').value;
+  const password = document.getElementById('password').value;
+  const confirmPassword = document.getElementById('confirmPassword').value;
+
+  if (password !== confirmPassword) {
+    message.textContent = 'Passwords do not match.';
+    return;
+  }
+
+  message.textContent = 'Creating your account...';
+
+  try {
+    const { data, error } = await window.supabaseClient.auth.signUp({
+      email,
+      password,
+      options: {
+        data: { full_name: fullName }
+      }
+    });
+
+    if (error) throw error;
+
+    if (!data.user) {
+      throw new Error('Account creation could not be confirmed.');
+    }
+
+    const { data: classRecord, error: classError } =
+      await window.supabaseClient
+        .from('classes')
+        .select('id')
+        .eq('name', studentClass)
+        .single();
+
+    if (classError || !classRecord) {
+      throw new Error('Selected class was not found. Please contact the school.');
+    }
+
+    const { error: updateError } =
+      await window.supabaseClient
+        .from('profiles')
+        .update({
+          full_name: fullName,
+          class_id: classRecord.id
+        })
+        .eq('id', data.user.id);
+
+    if (updateError) {
+      throw new Error('Account created, but profile setup needs administrator assistance.');
+    }
+
+    message.textContent =
+      'Registration successful! Check your email if verification is required.';
+
+    form.reset();
+
+  } catch (error) {
+    message.textContent = error.message;
+  }
+});
+</script>
+
+</body>
+</html>
