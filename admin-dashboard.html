@@ -1,0 +1,140 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Admin Dashboard | Tibyan Wattahfizul Qur'an</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .dashboard { max-width: 1150px; margin: auto; padding: 35px 20px; }
+    .welcome { margin-bottom: 28px; }
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit,minmax(210px,1fr));
+      gap: 18px;
+    }
+    .dash-card {
+      background: white;
+      padding: 25px;
+      border-radius: 14px;
+      box-shadow: 0 5px 20px rgba(0,0,0,.06);
+    }
+    .dash-card h3 { margin: 12px 0 8px; }
+    .dash-icon { font-size: 30px; }
+    .dash-card p { margin-bottom: 0; }
+    .dashboard-actions { margin-top: 28px; }
+    .logout-button { border: 0; cursor: pointer; }
+    #status { margin-top: 15px; }
+  </style>
+</head>
+<body>
+
+<header class="site-header">
+  <a class="brand" href="index.html">
+    <span class="brand-mark">ت</span>
+    <span>
+      <strong>TIBYAN WATTAHFIZUL QUR'AN</strong>
+      <small>Administrator Dashboard</small>
+    </span>
+  </a>
+  <button class="button button-dark logout-button" id="logoutButton">
+    Logout
+  </button>
+</header>
+
+<main class="dashboard">
+  <section class="welcome">
+    <span class="kicker">SCHOOL MANAGEMENT</span>
+    <h1>Admin Dashboard</h1>
+    <p>Welcome to the Tibyan school management portal.</p>
+    <p id="adminEmail">Checking administrator account...</p>
+    <p id="status" role="status"></p>
+  </section>
+
+  <section class="dashboard-grid">
+    <article class="dash-card">
+      <span class="dash-icon">♙</span>
+      <h3>Students</h3>
+      <p>Manage student records and information.</p>
+    </article>
+
+    <article class="dash-card">
+      <span class="dash-icon">♧</span>
+      <h3>Teachers</h3>
+      <p>Manage teacher accounts and assignments.</p>
+    </article>
+
+    <article class="dash-card">
+      <span class="dash-icon">▤</span>
+      <h3>Classes</h3>
+      <p>Organise classes and learning groups.</p>
+    </article>
+
+    <article class="dash-card">
+      <span class="dash-icon">♢</span>
+      <h3>Announcements</h3>
+      <p>Manage school news and announcements.</p>
+    </article>
+
+    <article class="dash-card">
+      <span class="dash-icon">▧</span>
+      <h3>Student Reports</h3>
+      <p>View student progress reports.</p>
+    </article>
+
+    <article class="dash-card">
+      <span class="dash-icon">✉</span>
+      <h3>Messages</h3>
+      <p>View school community messages.</p>
+    </article>
+  </section>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase-config.js"></script>
+
+<script>
+async function checkAdmin() {
+  const status = document.getElementById('status');
+
+  const { data: sessionData, error: sessionError } =
+    await window.supabaseClient.auth.getSession();
+
+  if (sessionError || !sessionData.session) {
+    window.location.replace('admin-login.html');
+    return;
+  }
+
+  const user = sessionData.session.user;
+
+  const { data: profile, error } = await window.supabaseClient
+    .from('profiles')
+    .select('role, approval_status')
+    .eq('id', user.id)
+    .single();
+
+  if (error || !profile ||
+      profile.role !== 'admin' ||
+      profile.approval_status !== 'approved') {
+    await window.supabaseClient.auth.signOut();
+    window.location.replace('admin-login.html');
+    return;
+  }
+
+  document.getElementById('adminEmail').textContent =
+    'Signed in as: ' + user.email;
+
+  status.textContent = 'Administrator access verified.';
+}
+
+document.getElementById('logoutButton').addEventListener('click', async () => {
+  await window.supabaseClient.auth.signOut();
+  window.location.replace('admin-login.html');
+});
+
+checkAdmin();
+</script>
+
+</body>
+</html>
