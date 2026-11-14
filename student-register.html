@@ -6,6 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Student Registration | Tibyan Wattahfizul Qur'an</title>
   <link rel="stylesheet" href="style.css">
+
   <style>
     .register-section {
       min-height: 90vh;
@@ -14,6 +15,7 @@
       display: grid;
       place-items: center;
     }
+
     .register-card {
       width: 100%;
       max-width: 600px;
@@ -22,12 +24,15 @@
       border-radius: 15px;
       box-shadow: 0 8px 30px rgba(0,0,0,.08);
     }
+
     .register-card h1 { margin-bottom: 10px; }
+
     .register-card label {
       display: block;
       margin: 15px 0 7px;
       font-weight: 600;
     }
+
     .register-card input,
     .register-card select,
     .register-card textarea {
@@ -37,15 +42,21 @@
       border-radius: 8px;
       font: inherit;
     }
+
     .register-card button {
       width: 100%;
       border: 0;
       margin-top: 24px;
       cursor: pointer;
     }
-    #message { margin-top: 15px; }
+
+    #message {
+      margin-top: 15px;
+      line-height: 1.6;
+    }
   </style>
 </head>
+
 <body>
 
 <header class="site-header">
@@ -65,6 +76,7 @@
     <p>Create your student portal account.</p>
 
     <form id="registerForm">
+
       <label for="fullName">Full Name</label>
       <input id="fullName" type="text" required>
 
@@ -79,27 +91,37 @@
 
       <label for="studentClass">Select Class</label>
       <select id="studentClass" required>
-        <option value="">Choose your class</option>
-        <option value="Tahfiz">Tahfiz</option>
-        <option value="Islamiyyah">Islamiyyah</option>
-        <option value="Arabic">Arabic</option>
+        <option value="">Loading classes...</option>
       </select>
 
       <label for="password">Create Password</label>
-      <input id="password" type="password" minlength="8"
-        autocomplete="new-password" required>
+      <input
+        id="password"
+        type="password"
+        minlength="8"
+        autocomplete="new-password"
+        required
+      >
 
       <label for="confirmPassword">Confirm Password</label>
-      <input id="confirmPassword" type="password"
-        autocomplete="new-password" required>
+      <input
+        id="confirmPassword"
+        type="password"
+        autocomplete="new-password"
+        required
+      >
 
-      <button class="button button-dark" type="submit">
+      <button class="button button-dark" id="registerButton" type="submit">
         Create Student Account
       </button>
     </form>
 
     <p id="message" role="status"></p>
-    <p>Already registered? <a href="student-login.html">Student Login</a></p>
+
+    <p>Already registered?
+      <a href="student-login.html">Student Login</a>
+    </p>
+
     <a href="index.html">← Back to Homepage</a>
   </section>
 </main>
@@ -108,73 +130,127 @@
 <script src="supabase-config.js"></script>
 
 <script>
-const form = document.getElementById('registerForm');
-const message = document.getElementById('message');
+const supabase = window.supabaseClient;
+const form = document.getElementById("registerForm");
+const message = document.getElementById("message");
+const classSelect = document.getElementById("studentClass");
+const registerButton = document.getElementById("registerButton");
 
-form.addEventListener('submit', async (event) => {
+// Load actual class IDs from Supabase
+async function loadClasses() {
+  try {
+    const { data, error } = await supabase
+      .from("classes")
+      .select("id, name")
+      .order("name");
+
+    if (error) throw error;
+
+    classSelect.innerHTML =
+      '<option value="">Choose your class</option>';
+
+    data.forEach(item => {
+      const option = document.createElement("option");
+      option.value = item.id;
+      option.textContent = item.name;
+      classSelect.appendChild(option);
+    });
+
+    if (!data.length) {
+      classSelect.innerHTML =
+        '<option value="">No classes available</option>';
+    }
+
+  } catch (error) {
+    classSelect.innerHTML =
+      '<option value="">Unable to load classes</option>';
+
+    message.style.color = "red";
+    message.textContent = "Could not load classes: " + error.message;
+  }
+}
+
+loadClasses();
+
+// Register student
+form.addEventListener("submit", async event => {
   event.preventDefault();
 
-  const fullName = document.getElementById('fullName').value.trim();
-  const email = document.getElementById('email').value.trim();
-  const phone = document.getElementById('phone').value.trim();
-  const address = document.getElementById('address').value.trim();
-  const studentClass = document.getElementById('studentClass').value;
-  const password = document.getElementById('password').value;
-  const confirmPassword = document.getElementById('confirmPassword').value;
+  const fullName =
+    document.getElementById("fullName").value.trim();
+
+  const email =
+    document.getElementById("email").value.trim();
+
+  const phone =
+    document.getElementById("phone").value.trim();
+
+  const address =
+    document.getElementById("address").value.trim();
+
+  const classId = classSelect.value;
+
+  const password =
+    document.getElementById("password").value;
+
+  const confirmPassword =
+    document.getElementById("confirmPassword").value;
 
   if (password !== confirmPassword) {
-    message.textContent = 'Passwords do not match.';
+    message.style.color = "red";
+    message.textContent = "Passwords do not match.";
     return;
   }
 
-  message.textContent = 'Creating your account...';
+  if (!classId) {
+    message.style.color = "red";
+    message.textContent = "Please select a valid class.";
+    return;
+  }
+
+  registerButton.disabled = true;
+  registerButton.textContent = "Creating account...";
+  message.style.color = "#333";
+  message.textContent = "Please wait while your account is created...";
 
   try {
-    const { data, error } = await window.supabaseClient.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        data: { full_name: fullName }
+        data: {
+          full_name: fullName,
+          phone: phone,
+          address: address,
+          class_id: classId
+        },
+        emailRedirectTo:
+          "https://chacolaty.github.io/tibyan-school-portal/student-login.html"
       }
     });
 
     if (error) throw error;
 
     if (!data.user) {
-      throw new Error('Account creation could not be confirmed.');
+      throw new Error("Account creation could not be confirmed.");
     }
 
-    const { data: classRecord, error: classError } =
-      await window.supabaseClient
-        .from('classes')
-        .select('id')
-        .eq('name', studentClass)
-        .single();
-
-    if (classError || !classRecord) {
-      throw new Error('Selected class was not found. Please contact the school.');
-    }
-
-    const { error: updateError } =
-      await window.supabaseClient
-        .from('profiles')
-        .update({
-          full_name: fullName,
-          class_id: classRecord.id
-        })
-        .eq('id', data.user.id);
-
-    if (updateError) {
-      throw new Error('Account created, but profile setup needs administrator assistance.');
-    }
-
+    message.style.color = "green";
     message.textContent =
-      'Registration successful! Check your email if verification is required.';
+      "Registration submitted successfully! " +
+      "Please check your email and confirm your email address. " +
+      "Your account is now awaiting administrator approval. " +
+      "You can log in after email verification and admin approval.";
 
     form.reset();
 
   } catch (error) {
+    message.style.color = "red";
     message.textContent = error.message;
+
+  } finally {
+    registerButton.disabled = false;
+    registerButton.textContent = "Create Student Account";
   }
 });
 </script>
